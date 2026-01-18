@@ -41,7 +41,6 @@ string tsToDate(long long ts) {
     if (ts <= 0) return "";
     time_t t = (time_t)ts;
     tm* lt = localtime(&t);
-    if (!lt) return "";
     char buf[32];
     strftime(buf, sizeof(buf), "%Y-%m-%d", lt);
     return string(buf);
@@ -114,6 +113,23 @@ void loadUsers() {
         u.email = p[2];
         u.history_count = safeToInt(p[3]);
         g_users.push_back(u);
+    }
+}
+
+void saveBooks() {
+    ofstream out(BOOKS_FILE);
+    for (auto& b : g_books) {
+        out << b.title << "," << b.author << "," << b.isbn << ","
+            << b.category << "," << b.year << ","
+            << b.borrowed_by << "," << b.borrow_count << ","
+            << b.due_ts << "\n";
+    }
+}
+
+void saveUsers() {
+    ofstream out(USERS_FILE);
+    for (auto& u : g_users) {
+        out << u.name << "," << u.id << "," << u.email << "," << u.history_count << "\n";
     }
 }
 
