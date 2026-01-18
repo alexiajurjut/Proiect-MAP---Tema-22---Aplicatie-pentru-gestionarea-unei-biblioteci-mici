@@ -133,8 +133,79 @@ void saveUsers() {
     }
 }
 
-int main() {
+void cmdAddBook(const vector<string>& args) {
+    if (args.size() < 3) {
+        cout << "Folosire: add_book \"Titlu\" \"Autor\" --isbn <isbn>\n";
+        return;
+    }
+
+    Book b;
+    b.title = args[1];
+    b.author = args[2];
+    b.isbn = opt(args, "--isbn");
+    b.category = opt(args, "--category", "N/A");
+    b.year = opt(args, "--year", "N/A");
+
+    if (b.isbn.empty()) {
+        cout << "Lipseste --isbn.\n";
+        return;
+    }
+
+    for (auto& x : g_books)
+        if (x.isbn == b.isbn) {
+            cout << "Exista deja o carte cu acest ISBN.\n";
+            return;
+        }
+
+    g_books.push_back(b);
+    saveBooks();
+    cout << "Carte adaugata.\n";
+}
+
+void cmdAddUser(const vector<string>& args) {
+    if (args.size() < 2) {
+        cout << "Folosire: add_user \"Nume\" --id <id>\n";
+        return;
+    }
+
+    User u;
+    u.name = args[1];
+    u.id = opt(args, "--id");
+    u.email = opt(args, "--email", "N/A");
+
+    if (u.id.empty()) {
+        cout << "Lipseste --id.\n";
+        return;
+    }
+
+    for (auto& x : g_users)
+        if (x.id == u.id) {
+            cout << "Exista deja un utilizator cu acest ID.\n";
+            return;
+        }
+
+    g_users.push_back(u);
+    saveUsers();
+    cout << "Utilizator adaugat.\n";
+}
+
+int main(int argc, char** argv) {
     loadBooks();
     loadUsers();
+
+    vector<string> args;
+    for (int i = 1; i < argc; i++) args.push_back(argv[i]);
+
+    if (args.empty()) {
+        cout << "Comenzi disponibile: add_book, add_user\n";
+        return 0;
+    }
+
+    string cmd = args[0];
+
+    if (cmd == "add_book") cmdAddBook(args);
+    else if (cmd == "add_user") cmdAddUser(args);
+    else cout << "Comanda necunoscuta.\n";
+
     return 0;
 }
