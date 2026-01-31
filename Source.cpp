@@ -272,6 +272,50 @@ void cmdReturn(const vector<string>& args) {
     cout << "ISBN inexistent.\n";
 }
 
+void cmdSearch(const vector<string>& args) {
+    string t = opt(args, "--title");
+    string a = opt(args, "--author");
+    string c = opt(args, "--category");
+    string i = opt(args, "--isbn");
+
+    cout << "Rezultate:\n";
+    for (auto& b : g_books) {
+        if ((t.empty() || b.title == t) &&
+            (a.empty() || b.author == a) &&
+            (c.empty() || b.category == c) &&
+            (i.empty() || b.isbn == i)) {
+
+            cout << " - " << b.title << " | "
+                << (b.borrowed_by.empty() ? "DISPONIBILA" : "IMPRUMUTATA")
+                << "\n";
+        }
+    }
+}
+
+void cmdReport(const vector<string>& args) {
+    if (hasFlag(args, "--borrowed")) {
+        cout << "Carti imprumutate:\n";
+        for (auto& b : g_books)
+            if (!b.borrowed_by.empty())
+                cout << " - " << b.title << " la " << b.borrowed_by << "\n";
+    }
+    else if (hasFlag(args, "--popular")) {
+        cout << "Popularitate carti:\n";
+        for (auto& b : g_books)
+            cout << " - " << b.title << " (" << b.borrow_count << " imprumuturi)\n";
+    }
+    else if (hasFlag(args, "--active-users")) {
+        cout << "Utilizatori activi:\n";
+        for (auto& u : g_users)
+            if (u.history_count > 0)
+                cout << " - " << u.name << " (" << u.history_count << " imprumuturi)\n";
+    }
+    else if (hasFlag(args, "--stats")) {
+        cout << "Total carti: " << g_books.size() << "\n";
+        cout << "Total utilizatori: " << g_users.size() << "\n";
+    }
+}
+
 int main(int argc, char** argv) {
     loadBooks();
     loadUsers();
@@ -280,7 +324,7 @@ int main(int argc, char** argv) {
     for (int i = 1; i < argc; i++) args.push_back(argv[i]);
 
     if (args.empty()) {
-        cout << "Comenzi disponibile: add_book, add_user, borrow, return\n";
+        cout << "Comenzi disponibile: add_book, add_user, borrow, return, search, report\n";
         return 0;
     }
 
@@ -290,6 +334,8 @@ int main(int argc, char** argv) {
     else if (cmd == "add_user") cmdAddUser(args);
     else if (cmd == "borrow") cmdBorrow(args);
     else if (cmd == "return") cmdReturn(args);
+    else if (cmd == "search") cmdSearch(args);
+    else if (cmd == "report") cmdReport(args);
     else cout << "Comanda necunoscuta.\n";
 
     return 0;
