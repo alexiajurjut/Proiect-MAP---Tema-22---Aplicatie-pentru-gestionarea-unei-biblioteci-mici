@@ -9,6 +9,7 @@
 
 using namespace std;
 
+// struct pt carte
 struct Book {
     string title;
     string author;
@@ -20,6 +21,7 @@ struct Book {
     long long due_ts = 0;
 };
 
+// struct pt user
 struct User {
     string name;
     string id;
@@ -27,16 +29,20 @@ struct User {
     int history_count = 0;
 };
 
+// liste globale
 vector<Book> g_books;
 vector<User> g_users;
 
+// fisiere csv
 const string BOOKS_FILE = "books.csv";
 const string USERS_FILE = "users.csv";
 
+// timp curent (ts)
 long long nowTs() {
     return (long long)time(nullptr);
 }
 
+// convert ts -> data text
 string tsToDate(long long ts) {
     if (ts <= 0) return "";
     time_t t = (time_t)ts;
@@ -46,16 +52,19 @@ string tsToDate(long long ts) {
     return string(buf);
 }
 
+// citire optiune gen --isbn 123
 string opt(const vector<string>& args, const string& key, const string& def = "") {
     for (size_t i = 0; i + 1 < args.size(); i++)
         if (args[i] == key) return args[i + 1];
     return def;
 }
 
+// verif flag gen --stats
 bool hasFlag(const vector<string>& args, const string& key) {
     return find(args.begin(), args.end(), key) != args.end();
 }
 
+// conversie sigura la int
 int safeToInt(const string& s, int def = 0) {
     try {
         if (s.empty()) return def;
@@ -64,6 +73,7 @@ int safeToInt(const string& s, int def = 0) {
     catch (...) { return def; }
 }
 
+// split simplu dupa sep
 vector<string> split(const string& line, char sep) {
     vector<string> out;
     string cur;
@@ -78,6 +88,7 @@ vector<string> split(const string& line, char sep) {
     return out;
 }
 
+// load carti din csv
 void loadBooks() {
     g_books.clear();
     ifstream f(BOOKS_FILE);
@@ -86,6 +97,7 @@ void loadBooks() {
         if (line.empty()) continue;
         auto p = split(line, ',');
         if (p.size() < 7) continue;
+
         Book b;
         b.title = p[0];
         b.author = p[1];
@@ -95,10 +107,12 @@ void loadBooks() {
         b.borrowed_by = p[5];
         b.borrow_count = safeToInt(p[6]);
         if (p.size() > 7) b.due_ts = stoll(p[7]);
+
         g_books.push_back(b);
     }
 }
 
+// load useri din csv
 void loadUsers() {
     g_users.clear();
     ifstream f(USERS_FILE);
@@ -107,15 +121,18 @@ void loadUsers() {
         if (line.empty()) continue;
         auto p = split(line, ',');
         if (p.size() < 4) continue;
+
         User u;
         u.name = p[0];
         u.id = p[1];
         u.email = p[2];
         u.history_count = safeToInt(p[3]);
+
         g_users.push_back(u);
     }
 }
 
+// save carti
 void saveBooks() {
     ofstream out(BOOKS_FILE);
     for (auto& b : g_books) {
@@ -126,6 +143,7 @@ void saveBooks() {
     }
 }
 
+// save useri
 void saveUsers() {
     ofstream out(USERS_FILE);
     for (auto& u : g_users) {
@@ -133,6 +151,7 @@ void saveUsers() {
     }
 }
 
+// cmd pt adaugare carte
 void cmdAddBook(const vector<string>& args) {
     if (args.size() < 3) {
         cout << "Folosire: add_book \"Titlu\" \"Autor\" --isbn <isbn>\n";
@@ -151,9 +170,10 @@ void cmdAddBook(const vector<string>& args) {
         return;
     }
 
+    // verif duplicate
     for (auto& x : g_books)
         if (x.isbn == b.isbn) {
-            cout << "Exista deja o carte cu acest ISBN.\n";
+            cout << "ISBN deja folosit.\n";
             return;
         }
 
@@ -162,6 +182,7 @@ void cmdAddBook(const vector<string>& args) {
     cout << "Carte adaugata.\n";
 }
 
+// cmd pt adaugare user
 void cmdAddUser(const vector<string>& args) {
     if (args.size() < 2) {
         cout << "Folosire: add_user \"Nume\" --id <id>\n";
@@ -180,15 +201,16 @@ void cmdAddUser(const vector<string>& args) {
 
     for (auto& x : g_users)
         if (x.id == u.id) {
-            cout << "Exista deja un utilizator cu acest ID.\n";
+            cout << "ID deja folosit.\n";
             return;
         }
 
     g_users.push_back(u);
     saveUsers();
-    cout << "Utilizator adaugat.\n";
+    cout << "User adaugat.\n";
 }
 
+// cmd imprumut
 void cmdBorrow(const vector<string>& args) {
     string isbn = opt(args, "--isbn");
     string uid = opt(args, "--user_id");
@@ -202,7 +224,7 @@ void cmdBorrow(const vector<string>& args) {
     auto uit = find_if(g_users.begin(), g_users.end(),
         [&](const User& u) { return u.id == uid; });
     if (uit == g_users.end()) {
-        cout << "Utilizator inexistent.\n";
+        cout << "User inexistent.\n";
         return;
     }
 
@@ -222,7 +244,7 @@ void cmdBorrow(const vector<string>& args) {
             saveBooks();
             saveUsers();
 
-            cout << "Imprumut inregistrat. Termen: " << tsToDate(b.due_ts) << "\n";
+            cout << "Imprumut ok. Termen: " << tsToDate(b.due_ts) << "\n";
             return;
         }
     }
@@ -230,6 +252,7 @@ void cmdBorrow(const vector<string>& args) {
     cout << "ISBN inexistent.\n";
 }
 
+// cmd returnare
 void cmdReturn(const vector<string>& args) {
     string isbn = opt(args, "--isbn");
     string uid = opt(args, "--user_id");
@@ -246,7 +269,7 @@ void cmdReturn(const vector<string>& args) {
                 return;
             }
             if (b.borrowed_by != uid) {
-                cout << "Aceasta carte nu a fost imprumutata de acest utilizator.\n";
+                cout << "User grest pt returnare.\n";
                 return;
             }
 
@@ -259,11 +282,11 @@ void cmdReturn(const vector<string>& args) {
             b.due_ts = 0;
             saveBooks();
 
-            cout << "Cartea a fost returnata.\n";
+            cout << "Returnare ok.\n";
             if (overdue > 0)
                 cout << "Intarziere: " << overdue << " zile.\n";
             else
-                cout << "Returnata la timp.\n";
+                cout << "La timp.\n";
 
             return;
         }
@@ -272,6 +295,7 @@ void cmdReturn(const vector<string>& args) {
     cout << "ISBN inexistent.\n";
 }
 
+// cmd cautare
 void cmdSearch(const vector<string>& args) {
     string t = opt(args, "--title");
     string a = opt(args, "--author");
@@ -289,15 +313,16 @@ void cmdSearch(const vector<string>& args) {
 
             found = true;
             cout << " - " << b.title << " | "
-                << (b.borrowed_by.empty() ? "DISPONIBILA" : "IMPRUMUTATA")
+                << (b.borrowed_by.empty() ? "LIBERA" : "OCUPATA")
                 << "\n";
         }
     }
 
     if (!found)
-        cout << "Nicio carte gasita.\n";
+        cout << "Nimic gasit.\n";
 }
 
+// cmd rapoarte
 void cmdReport(const vector<string>& args) {
     if (hasFlag(args, "--borrowed")) {
         bool any = false;
@@ -307,29 +332,30 @@ void cmdReport(const vector<string>& args) {
                 any = true;
                 cout << " - " << b.title << " la " << b.borrowed_by << "\n";
             }
-        if (!any) cout << "Nicio carte imprumutata.\n";
+        if (!any) cout << "Nimic.\n";
     }
     else if (hasFlag(args, "--popular")) {
-        cout << "Popularitate carti:\n";
+        cout << "Popularitate:\n";
         for (auto& b : g_books)
-            cout << " - " << b.title << " (" << b.borrow_count << " imprumuturi)\n";
+            cout << " - " << b.title << " (" << b.borrow_count << " impr)\n";
     }
     else if (hasFlag(args, "--active-users")) {
         bool any = false;
-        cout << "Utilizatori activi:\n";
+        cout << "Useri activi:\n";
         for (auto& u : g_users)
             if (u.history_count > 0) {
                 any = true;
-                cout << " - " << u.name << " (" << u.history_count << " imprumuturi)\n";
+                cout << " - " << u.name << " (" << u.history_count << " impr)\n";
             }
-        if (!any) cout << "Niciun utilizator activ.\n";
+        if (!any) cout << "Nimeni.\n";
     }
     else if (hasFlag(args, "--stats")) {
         cout << "Total carti: " << g_books.size() << "\n";
-        cout << "Total utilizatori: " << g_users.size() << "\n";
+        cout << "Total useri: " << g_users.size() << "\n";
     }
 }
 
+// cmd export
 void cmdExport(const vector<string>& args) {
     if (args.size() < 2) {
         cout << "Folosire: export <fisier.csv>\n";
@@ -338,7 +364,7 @@ void cmdExport(const vector<string>& args) {
 
     ofstream out(args[1]);
     if (!out) {
-        cout << "Nu pot deschide fisierul.\n";
+        cout << "Eroare deschidere fisier.\n";
         return;
     }
 
@@ -350,9 +376,10 @@ void cmdExport(const vector<string>& args) {
             << b.due_ts << "\n";
     }
 
-    cout << "Export realizat.\n";
+    cout << "Export ok.\n";
 }
 
+// cmd import
 void cmdImport(const vector<string>& args) {
     if (args.size() < 2) {
         cout << "Folosire: import <fisier.csv>\n";
@@ -361,7 +388,7 @@ void cmdImport(const vector<string>& args) {
 
     ifstream in(args[1]);
     if (!in) {
-        cout << "Nu pot deschide fisierul.\n";
+        cout << "Eroare deschidere fisier.\n";
         return;
     }
 
@@ -410,7 +437,7 @@ void cmdImport(const vector<string>& args) {
     }
 
     saveBooks();
-    cout << "Import complet. Carti noi: " << added << "\n";
+    cout << "Import ok. Carti noi: " << added << "\n";
 }
 
 int main(int argc, char** argv) {
@@ -421,7 +448,7 @@ int main(int argc, char** argv) {
     for (int i = 1; i < argc; i++) args.push_back(argv[i]);
 
     if (args.empty()) {
-        cout << "Comenzi disponibile: add_book, add_user, borrow, return, search, report, export, import\n";
+        cout << "Cmd: add_book, add_user, borrow, return, search, report, export, import\n";
         return 0;
     }
 
@@ -435,7 +462,7 @@ int main(int argc, char** argv) {
     else if (cmd == "report") cmdReport(args);
     else if (cmd == "export") cmdExport(args);
     else if (cmd == "import") cmdImport(args);
-    else cout << "Comanda necunoscuta.\n";
+    else cout << "Cmd necunoscuta.\n";
 
     return 0;
 }
