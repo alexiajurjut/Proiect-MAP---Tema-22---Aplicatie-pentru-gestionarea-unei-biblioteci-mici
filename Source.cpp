@@ -189,6 +189,89 @@ void cmdAddUser(const vector<string>& args) {
     cout << "Utilizator adaugat.\n";
 }
 
+void cmdBorrow(const vector<string>& args) {
+    string isbn = opt(args, "--isbn");
+    string uid = opt(args, "--user_id");
+    int days = safeToInt(opt(args, "--days", "14"), 14);
+
+    if (isbn.empty() || uid.empty()) {
+        cout << "Trebuie --isbn si --user_id.\n";
+        return;
+    }
+
+    auto uit = find_if(g_users.begin(), g_users.end(),
+        [&](const User& u) { return u.id == uid; });
+    if (uit == g_users.end()) {
+        cout << "Utilizator inexistent.\n";
+        return;
+    }
+
+    for (auto& b : g_books) {
+        if (b.isbn == isbn) {
+            if (!b.borrowed_by.empty()) {
+                cout << "Cartea este deja imprumutata.\n";
+                return;
+            }
+
+            b.borrowed_by = uid;
+            b.borrow_count++;
+            b.due_ts = nowTs() + (long long)days * 24LL * 3600LL;
+
+            uit->history_count++;
+
+            saveBooks();
+            saveUsers();
+
+            cout << "Imprumut inregistrat. Termen: " << tsToDate(b.due_ts) << "\n";
+            return;
+        }
+    }
+
+    cout << "ISBN inexistent.\n";
+}
+
+void cmdReturn(const vector<string>& args) {
+    string isbn = opt(args, "--isbn");
+    string uid = opt(args, "--user_id");
+
+    if (isbn.empty() || uid.empty()) {
+        cout << "Trebuie --isbn si --user_id.\n";
+        return;
+    }
+
+    for (auto& b : g_books) {
+        if (b.isbn == isbn) {
+            if (b.borrowed_by.empty()) {
+                cout << "Cartea nu este imprumutata.\n";
+                return;
+            }
+            if (b.borrowed_by != uid) {
+                cout << "Aceasta carte nu a fost imprumutata de acest utilizator.\n";
+                return;
+            }
+
+            long long now = nowTs();
+            int overdue = (now > b.due_ts)
+                ? (int)((now - b.due_ts) / (24LL * 3600LL))
+                : 0;
+
+            b.borrowed_by = "";
+            b.due_ts = 0;
+            saveBooks();
+
+            cout << "Cartea a fost returnata.\n";
+            if (overdue > 0)
+                cout << "Intarziere: " << overdue << " zile.\n";
+            else
+                cout << "Returnata la timp.\n";
+
+            return;
+        }
+    }
+
+    cout << "ISBN inexistent.\n";
+}
+
 int main(int argc, char** argv) {
     loadBooks();
     loadUsers();
@@ -197,7 +280,7 @@ int main(int argc, char** argv) {
     for (int i = 1; i < argc; i++) args.push_back(argv[i]);
 
     if (args.empty()) {
-        cout << "Comenzi disponibile: add_book, add_user\n";
+        cout << "Comenzi disponibile: add_book, add_user, borrow, return\n";
         return 0;
     }
 
@@ -205,6 +288,8 @@ int main(int argc, char** argv) {
 
     if (cmd == "add_book") cmdAddBook(args);
     else if (cmd == "add_user") cmdAddUser(args);
+    else if (cmd == "borrow") cmdBorrow(args);
+    else if (cmd == "return") cmdReturn(args);
     else cout << "Comanda necunoscuta.\n";
 
     return 0;
