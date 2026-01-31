@@ -316,6 +316,86 @@ void cmdReport(const vector<string>& args) {
     }
 }
 
+void cmdExport(const vector<string>& args) {
+    if (args.size() < 2) {
+        cout << "Folosire: export <fisier.csv>\n";
+        return;
+    }
+
+    ofstream out(args[1]);
+    if (!out) {
+        cout << "Nu pot deschide fisierul.\n";
+        return;
+    }
+
+    out << "title,author,isbn,category,year,borrowed_by,borrow_count,due_ts\n";
+    for (auto& b : g_books) {
+        out << b.title << "," << b.author << "," << b.isbn << ","
+            << b.category << "," << b.year << ","
+            << b.borrowed_by << "," << b.borrow_count << ","
+            << b.due_ts << "\n";
+    }
+
+    cout << "Export realizat.\n";
+}
+
+void cmdImport(const vector<string>& args) {
+    if (args.size() < 2) {
+        cout << "Folosire: import <fisier.csv>\n";
+        return;
+    }
+
+    ifstream in(args[1]);
+    if (!in) {
+        cout << "Nu pot deschide fisierul.\n";
+        return;
+    }
+
+    string line;
+    getline(in, line);
+
+    int added = 0;
+
+    while (getline(in, line)) {
+        if (line.empty()) continue;
+
+        vector<string> p;
+        size_t pos = 0;
+        string temp = line;
+
+        while ((pos = temp.find(',')) != string::npos) {
+            p.push_back(temp.substr(0, pos));
+            temp.erase(0, pos + 1);
+        }
+        p.push_back(temp);
+
+        if (p.size() < 3) continue;
+
+        Book b;
+        b.title = p[0];
+        b.author = p[1];
+        b.isbn = p[2];
+        if (p.size() > 3) b.category = p[3];
+        if (p.size() > 4) b.year = p[4];
+        if (p.size() > 5) b.borrowed_by = p[5];
+        if (p.size() > 6) b.borrow_count = safeToInt(p[6], 0);
+        if (p.size() > 7) b.due_ts = stoll(p[7]);
+
+        bool exists = false;
+        for (auto& x : g_books)
+            if (x.isbn == b.isbn)
+                exists = true;
+
+        if (!exists) {
+            g_books.push_back(b);
+            added++;
+        }
+    }
+
+    saveBooks();
+    cout << "Import complet. Carti noi: " << added << "\n";
+}
+
 int main(int argc, char** argv) {
     loadBooks();
     loadUsers();
@@ -324,7 +404,7 @@ int main(int argc, char** argv) {
     for (int i = 1; i < argc; i++) args.push_back(argv[i]);
 
     if (args.empty()) {
-        cout << "Comenzi disponibile: add_book, add_user, borrow, return, search, report\n";
+        cout << "Comenzi disponibile: add_book, add_user, borrow, return, search, report, export, import\n";
         return 0;
     }
 
@@ -336,6 +416,8 @@ int main(int argc, char** argv) {
     else if (cmd == "return") cmdReturn(args);
     else if (cmd == "search") cmdSearch(args);
     else if (cmd == "report") cmdReport(args);
+    else if (cmd == "export") cmdExport(args);
+    else if (cmd == "import") cmdImport(args);
     else cout << "Comanda necunoscuta.\n";
 
     return 0;
