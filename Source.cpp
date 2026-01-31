@@ -278,6 +278,8 @@ void cmdSearch(const vector<string>& args) {
     string c = opt(args, "--category");
     string i = opt(args, "--isbn");
 
+    bool found = false;
+
     cout << "Rezultate:\n";
     for (auto& b : g_books) {
         if ((t.empty() || b.title == t) &&
@@ -285,19 +287,27 @@ void cmdSearch(const vector<string>& args) {
             (c.empty() || b.category == c) &&
             (i.empty() || b.isbn == i)) {
 
+            found = true;
             cout << " - " << b.title << " | "
                 << (b.borrowed_by.empty() ? "DISPONIBILA" : "IMPRUMUTATA")
                 << "\n";
         }
     }
+
+    if (!found)
+        cout << "Nicio carte gasita.\n";
 }
 
 void cmdReport(const vector<string>& args) {
     if (hasFlag(args, "--borrowed")) {
+        bool any = false;
         cout << "Carti imprumutate:\n";
         for (auto& b : g_books)
-            if (!b.borrowed_by.empty())
+            if (!b.borrowed_by.empty()) {
+                any = true;
                 cout << " - " << b.title << " la " << b.borrowed_by << "\n";
+            }
+        if (!any) cout << "Nicio carte imprumutata.\n";
     }
     else if (hasFlag(args, "--popular")) {
         cout << "Popularitate carti:\n";
@@ -305,10 +315,14 @@ void cmdReport(const vector<string>& args) {
             cout << " - " << b.title << " (" << b.borrow_count << " imprumuturi)\n";
     }
     else if (hasFlag(args, "--active-users")) {
+        bool any = false;
         cout << "Utilizatori activi:\n";
         for (auto& u : g_users)
-            if (u.history_count > 0)
+            if (u.history_count > 0) {
+                any = true;
                 cout << " - " << u.name << " (" << u.history_count << " imprumuturi)\n";
+            }
+        if (!any) cout << "Niciun utilizator activ.\n";
     }
     else if (hasFlag(args, "--stats")) {
         cout << "Total carti: " << g_books.size() << "\n";
@@ -352,7 +366,10 @@ void cmdImport(const vector<string>& args) {
     }
 
     string line;
-    getline(in, line);
+    if (!getline(in, line)) {
+        cout << "Fisier gol.\n";
+        return;
+    }
 
     int added = 0;
 
